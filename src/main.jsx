@@ -286,4 +286,262 @@ function App() {
             <input 
               type="email" 
               value={email} 
-              onChange={e => setEmail(e.target.value
+              onChange={e => setEmail(e.target.value)} 
+              required 
+              autoComplete="email"
+            />
+          </label>
+          <label>
+            Password
+            <input 
+              type="password" 
+              minLength="8" 
+              value={password} 
+              onChange={e => setPassword(e.target.value)} 
+              required 
+              autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
+            />
+          </label>
+
+          {authMode === 'signin' && (
+            <div style={{ textAlign: 'right', marginBottom: '12px' }}>
+              <button 
+                type="button" 
+                className="linkbtn" 
+                onClick={handleForgotPassword}
+                style={{ fontSize: '0.85rem', padding: 0 }}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+
+          <button className="primary full" disabled={busy}>
+            {busy ? 'Please wait…' : authMode === 'signin' ? 'Sign in' : 'Create account'}
+          </button>
+          
+          <button 
+            type="button" 
+            className="linkbtn" 
+            onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); notify(''); }}
+          >
+            {authMode === 'signin' ? "Need an account? Sign up" : "Already registered? Sign in"}
+          </button>
+          
+          {message && <p className={isError ? 'error' : 'success'}>{message}</p>}
+        </form>
+      </main>
+    );
+  }
+
+  return (
+    <main className="shell">
+      <header className="topbar">
+        <div className="brand">
+          <div className="logo">DC</div>
+          <div><h1>Delivery Challan</h1><p>Management Portal</p></div>
+        </div>
+        <div className="account">
+          <span>{session.user.email}</span>
+          <button onClick={signOut}>Sign out</button>
+        </div>
+      </header>
+
+      <nav className="tabs">
+        <button className={active === 'dashboard' ? 'selected' : ''} onClick={() => setActive('dashboard')}>Dashboard</button>
+        <button className={active === 'create' ? 'selected' : ''} onClick={() => setActive('create')}>+ New DC</button>
+        <button className={active === 'history' ? 'selected' : ''} onClick={() => setActive('history')}>DC History</button>
+      </nav>
+
+      {message && <div className={isError ? 'alert error' : 'alert success'}>{message}<button onClick={() => setMessage('')} aria-label="Dismiss">×</button></div>}
+
+      {active === 'dashboard' && (
+        <>
+          <div className="pagehead">
+            <div><h2>Dashboard</h2><p>Overview of your team's delivery challans.</p></div>
+            <button className="primary" onClick={() => { setForm(blank()); setActive('create'); }}>+ Create DC</button>
+          </div>
+          <div className="stats">
+            <div className="stat"><span>Total challans loaded</span><strong>{records.length}</strong></div>
+            <div className="stat"><span>Today's challans</span><strong>{records.filter(r => r.dc_date === today).length}</strong></div>
+            <div className="stat"><span>Vehicles used</span><strong>{new Set(records.map(r => r.vehicle_number)).size}</strong></div>
+          </div>
+          <section className="card">
+            <div className="sectionhead">
+              <h3>Recent challans</h3>
+              <button onClick={() => setActive('history')}>View history →</button>
+            </div>
+            <RecordTable records={records.slice(0, 6)} onView={viewDC} onPDF={downloadPDF} />
+          </section>
+        </>
+      )}
+
+      {active === 'create' && (
+        <>
+          <div className="pagehead"><div><h2>Create delivery challan</h2><p>Complete the details, then save the DC to shared history.</p></div></div>
+          <form className="card dcform" onSubmit={createDC}>
+            <h3>Challan details</h3>
+            <div className="formgrid">
+              <Field label="DC date" required><input type="date" value={form.dc_date} onChange={e => setField('dc_date', e.target.value)} required /></Field>
+              <Field label="DC number" hint="Leave blank to suggest a number"><input value={form.dc_number} onChange={e => setField('dc_number', e.target.value)} placeholder="Auto-suggested on save" /></Field>
+              <Field label="Dispatch from address" required><textarea value={form.from_address} onChange={e => setField('from_address', e.target.value)} rows="3" required placeholder="Company, street, city, PIN" /></Field>
+              <Field label="Delivery to address" required><textarea value={form.to_address} onChange={e => setField('to_address', e.target.value)} rows="3" required placeholder="Company, street, city, PIN" /></Field>
+            </div>
+            <div className="sectionhead">
+              <h3>Material list</h3>
+              <button type="button" onClick={() => setForm(p => ({ ...p, materials: [...p.materials, { name: '', qty: '', unit: 'Nos' }] }))}>+ Add material</button>
+            </div>
+            {form.materials.map((m, i) => (
+              <div className="materialrow" key={i}>
+                <Field label={`Material ${i + 1}`} required><input value={m.name} onChange={e => setMaterial(i, 'name', e.target.value)} required placeholder="Material name" /></Field>
+                <Field label="Quantity" required><input type="number" min="0.001" step="any" value={m.qty} onChange={e => setMaterial(i, 'qty', e.target.value)} required placeholder="0" /></Field>
+                <Field label="Unit" required>
+                  <select value={m.unit} onChange={e => setMaterial(i, 'unit', e.target.value)}>
+                    {['Nos', 'Kg', 'Ton', 'Meters', 'Boxes', 'Litres', 'Other'].map(u => <option key={u}>{u}</option>)}
+                  </select>
+                </Field>
+                {form.materials.length > 1 && <button type="button" className="remove" onClick={() => setForm(p => ({ ...p, materials: p.materials.filter((_, j) => j !== i) }))}>Remove</button>}
+              </div>
+            ))}
+            <h3 className="subhead">Vehicle and driver</h3>
+            <div className="formgrid">
+              <Field label="Vehicle number" required><input value={form.vehicle_number} onChange={e => setField('vehicle_number', e.target.value.toUpperCase())} required placeholder="e.g. MH 13 AB 1234" /></Field>
+              <Field label="Driver name" required><input value={form.driver_name} onChange={e => setField('driver_name', e.target.value)} required /></Field>
+              <Field label="Driver mobile number" required><input type="tel" value={form.driver_phone} onChange={e => setField('driver_phone', e.target.value)} required placeholder="Mobile number" /></Field>
+            </div>
+            <h3 className="subhead">Receiver details</h3>
+            <div className="formgrid">
+              <Field label="Receiver name" required><input value={form.receiver_name} onChange={e => setField('receiver_name', e.target.value)} required /></Field>
+              <Field label="Receiver mobile number" required><input type="tel" value={form.receiver_phone} onChange={e => setField('receiver_phone', e.target.value)} required placeholder="Mobile number" /></Field>
+            </div>
+            <div className="formactions">
+              <button type="button" onClick={() => setForm(blank())}>Clear form</button>
+              <button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Validate & Save DC'}</button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {active === 'history' && (
+        <>
+          <div className="pagehead">
+            <div><h2>DC history</h2><p>Search saved records shared across authorized users.</p></div>
+            <button className="primary" onClick={() => { setForm(blank()); setActive('create'); }}>+ New DC</button>
+          </div>
+          <section className="card">
+            <div className="filters">
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search DC, vehicle, receiver, material…" />
+              <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} aria-label="Filter by date" />
+              <button onClick={() => { setSearch(''); setDateFilter(''); }}>Clear filters</button>
+              <button onClick={loadRecords} disabled={busy}>{busy ? 'Loading…' : 'Refresh'}</button>
+            </div>
+            <p className="muted">{filtered.length} matching record(s), up to 1,000 latest records loaded.</p>
+            <RecordTable records={filtered} onView={viewDC} onPDF={downloadPDF} />
+          </section>
+          {preview && (
+            <section className="card preview">
+              <div className="sectionhead">
+                <div><h3>DC preview · {preview.dc_number}</h3><p className="muted">{fmtDate(preview.dc_date)}</p></div>
+                <div className="buttonrow">
+                  <button onClick={() => downloadPDF(preview)} className="primary">Download PDF</button>
+                  <button onClick={() => setPreview(null)}>Close</button>
+                </div>
+              </div>
+              <ChallanPreview record={preview} />
+            </section>
+          )}
+        </>
+      )}
+
+      <footer>Shared records require a configured Supabase project and an authenticated account.</footer>
+    </main>
+  );
+}
+
+function Field({ label, required, hint, children }) {
+  return (
+    <label className="field">
+      <span>{label}{required && <b className="required"> *</b>}</span>
+      {children}
+      {hint && <small>{hint}</small>}
+    </label>
+  );
+}
+
+function RecordTable({ records, onView, onPDF }) {
+  if (!records.length) return <div className="empty"><strong>No challans found</strong><p>Create a DC or adjust your search filters.</p></div>;
+  return (
+    <div className="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>DC number</th>
+            <th>Date</th>
+            <th>Vehicle</th>
+            <th>Receiver</th>
+            <th>Materials</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map(r => (
+            <tr key={r.id}>
+              <td><strong>{r.dc_number}</strong></td>
+              <td>{fmtDate(r.dc_date)}</td>
+              <td>{r.vehicle_number}</td>
+              <td>{r.receiver_name}</td>
+              <td>{(r.materials || []).length} item(s)</td>
+              <td>
+                <div className="buttonrow">
+                  <button onClick={() => onView(r)}>View</button>
+                  <button onClick={() => onPDF(r)}>PDF</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ChallanPreview({ record: r }) {
+  return (
+    <div className="paper">
+      <h2>DELIVERY CHALLAN</h2>
+      <div className="paperline"><b>DC Number:</b> {r.dc_number}<b>Date:</b> {fmtDate(r.dc_date)}</div>
+      <div className="addressgrid">
+        <div><b>DISPATCH FROM</b><p>{r.from_address}</p></div>
+        <div><b>DELIVER TO</b><p>{r.to_address}</p></div>
+      </div>
+      <h4>Material details</h4>
+      <table>
+        <thead>
+          <tr><th>Sr.</th><th>Material</th><th>Quantity</th><th>Unit</th></tr>
+        </thead>
+        <tbody>
+          {(r.materials || []).map((m, i) => (
+            <tr key={i}>
+              <td>{i + 1}</td>
+              <td>{m.name}</td>
+              <td>{m.qty}</td>
+              <td>{m.unit}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h4>Transport and receiver</h4>
+      <div className="paperdetails">
+        <p><b>Vehicle:</b> {r.vehicle_number}</p>
+        <p><b>Driver:</b> {r.driver_name} · {r.driver_phone}</p>
+        <p><b>Receiver:</b> {r.receiver_name} · {r.receiver_phone}</p>
+      </div>
+      <div className="signatures">
+        <span>Authorized signatory</span>
+        <span>Receiver signature</span>
+      </div>
+    </div>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<App />);
