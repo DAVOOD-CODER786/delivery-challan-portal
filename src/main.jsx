@@ -31,6 +31,7 @@ function App() {
   const [authMode, setAuthMode] = useState('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [form, setForm] = useState(blank);
@@ -251,14 +252,24 @@ function App() {
             <p className="muted">Enter your new secure password below.</p>
             <label>
               New Password
-              <input 
-                type="password" 
-                minLength="8" 
-                value={newPassword} 
-                onChange={e => setNewPassword(e.target.value)} 
-                required 
-                autoComplete="new-password"
-              />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  minLength="8" 
+                  value={newPassword} 
+                  onChange={e => setNewPassword(e.target.value)} 
+                  required 
+                  autoComplete="new-password"
+                  style={{ width: '100%', paddingRight: '60px' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </label>
             <button className="primary full" disabled={busy}>
               {busy ? 'Updating…' : 'Update Password'}
@@ -293,14 +304,24 @@ function App() {
           </label>
           <label>
             Password
-            <input 
-              type="password" 
-              minLength="8" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required 
-              autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
-            />
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                minLength="8" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+                required 
+                autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
+                style={{ width: '100%', paddingRight: '60px' }}
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </label>
 
           {authMode === 'signin' && (
