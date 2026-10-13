@@ -1,3 +1,166 @@
+:root {
+  --bg-main: #f4f6f5;
+  --card-bg: #ffffff;
+  --primary: #0b4d33;
+  --primary-hover: #083b27;
+  --text-dark: #1f2923;
+  --text-muted: #627267;
+  --border-color: #d1dad5;
+  --error-bg: #fde8e8;
+  --error-text: #9b1c1c;
+  --success-bg: #def7ec;
+  --success-text: #03543f;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header & Branding */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  background: var(--primary);
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand h1 {
+  font-size: 1.3rem;
+  color: var(--text-dark);
+}
+
+.brand p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Card Container */
+.card {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-top: 20px;
+}
+
+/* Forms & Inputs */
+form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: #fafbfc;
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(11, 77, 51, 0.12);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 18px;
+  transition: all 0.2s ease;
+}
+
+button.primary {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+button.primary:hover {
+  background-color: var(--primary-hover);
+}
+
+button.full {
+  width: 100%;
+}
+
+button.linkbtn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.9rem;
+  padding: 4px 8px;
+}
+
+button.linkbtn:hover {
+  text-decoration: underline;
+}
+
+/* Alert Notifications */
+p.error, .alert.error {
+  background-color: var(--error-bg);
+  color: var(--error-text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+p.success, .alert.success {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+/* Modern Split Auth Layout */
 .auth-container {
   display: flex;
   max-width: 900px;
@@ -5,7 +168,7 @@
   margin: 40px auto;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   background: #ffffff;
 }
 
@@ -19,7 +182,7 @@
 
 .auth-right {
   flex: 1.1;
-  background-color: #0b4d33;
+  background-color: var(--primary);
   position: relative;
   display: flex;
   align-items: center;
@@ -38,19 +201,4 @@
 
 .truck-graphic {
   width: 100%;
-  max-width: 320px;
-  height: auto;
-  margin: 0 auto;
-  display: block;
-}
-
-/* Responsive adjustment for mobile screens */
-@media (max-width: 768px) {
-  .auth-container {
-    flex-direction: column;
-    margin: 20px auto;
-  }
-  .auth-right {
-    min-height: 220px;
-  }
-}
+  max-
