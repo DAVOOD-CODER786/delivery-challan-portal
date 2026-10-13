@@ -25,6 +25,57 @@ const blank = () => ({
 const fmtDate = s => s ? new Date(`${s}T00:00:00`).toLocaleDateString('en-IN') : '';
 const clean = v => String(v ?? '').trim();
 
+function TruckGraphic() {
+  return (
+    <svg className="truck-graphic" viewBox="0 0 500 350" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Background City Silhouette */}
+      <path d="M50 220V150H90V220H130V120H170V220H230V100H280V220H340V140H380V220H450V220Z" fill="#0d593b" opacity="0.5"/>
+      
+      {/* Winding Road */}
+      <path d="M-20 280 C 150 280, 200 180, 520 180" stroke="#ffffff" strokeWidth="36" opacity="0.2" strokeLinecap="round"/>
+      <path d="M-20 280 C 150 280, 200 180, 520 180" stroke="#ffffff" strokeWidth="2" strokeDasharray="12 12" opacity="0.6"/>
+
+      {/* Map Pins */}
+      <g fill="#E5C158">
+        <path d="M120 160 C120 150, 135 135, 135 120 C135 110, 128 100, 120 100 C112 100, 105 110, 105 120 C105 135, 120 150, 120 160 Z"/>
+        <circle cx="120" cy="120" r="5" fill="#0b4d33"/>
+
+        <path d="M380 130 C380 120, 395 105, 395 90 C395 80, 388 70, 380 70 C372 70, 365 80, 365 90 C365 105, 380 120, 380 130 Z"/>
+        <circle cx="380" cy="90" r="5" fill="#0b4d33"/>
+
+        <path d="M260 250 C260 240, 275 225, 275 210 C275 200, 268 190, 260 190 C252 190, 245 200, 245 210 C245 225, 260 240, 260 250 Z"/>
+        <circle cx="260" cy="210" r="5" fill="#0b4d33"/>
+      </g>
+
+      {/* Delivery Truck */}
+      <g transform="translate(160, 185)">
+        {/* Cargo Body */}
+        <rect x="0" y="0" width="130" height="70" rx="6" fill="#FFFFFF" />
+        <rect x="10" y="10" width="110" height="50" rx="3" fill="#E8EFEC" />
+        {/* DC Logo on Truck */}
+        <rect x="45" y="20" width="30" height="30" rx="6" fill="#0b4d33" />
+        <text x="60" y="40" fill="#FFFFFF" fontSize="14" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">DC</text>
+        
+        {/* Truck Cabin */}
+        <path d="M130 20 H160 L180 45 V70 H130 Z" fill="#2E7D5B" />
+        {/* Windshield */}
+        <path d="M142 26 H158 L170 42 H142 Z" fill="#A3D9C9" />
+        
+        {/* Wheels */}
+        <circle cx="30" cy="72" r="16" fill="#1F2923" />
+        <circle cx="30" cy="72" r="7" fill="#E8EFEC" />
+        <circle cx="100" cy="72" r="16" fill="#1F2923" />
+        <circle cx="100" cy="72" r="7" fill="#E8EFEC" />
+        <circle cx="155" cy="72" r="16" fill="#1F2923" />
+        <circle cx="155" cy="72" r="7" fill="#E8EFEC" />
+        
+        {/* Headlight */}
+        <path d="M180 52 H184 V60 H180 Z" fill="#E5C158" />
+      </g>
+    </svg>
+  );
+}
+
 function App() {
   const [session, setSession] = useState(null);
   const [authReady, setAuthReady] = useState(false);
@@ -237,120 +288,133 @@ function App() {
   );
 
   if (!session) {
-    if (recoveryMode) {
-      return (
-        <main className="shell auth">
-          <header className="brand">
-            <div className="logo">DC</div>
-            <div>
-              <h1>Delivery Challan Portal</h1>
-              <p>Set your new password</p>
-            </div>
-          </header>
-          <form className="card authform" onSubmit={updatePassword}>
-            <h2>Reset Password</h2>
-            <p className="muted">Enter your new secure password below.</p>
-            <label>
-              New Password
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <input 
-                  type={showPassword ? 'text' : 'password'} 
-                  minLength="8" 
-                  value={newPassword} 
-                  onChange={e => setNewPassword(e.target.value)} 
-                  required 
-                  autoComplete="new-password"
-                  style={{ width: '100%', paddingRight: '60px' }}
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </label>
-            <button className="primary full" disabled={busy}>
-              {busy ? 'Updating…' : 'Update Password'}
-            </button>
-            {message && <p className={isError ? 'error' : 'success'}>{message}</p>}
-          </form>
-        </main>
-      );
-    }
-
     return (
       <main className="shell auth">
-        <header className="brand">
-          <div className="logo">DC</div>
-          <div>
-            <h1>Delivery Challan Portal</h1>
-            <p>Team access • Searchable history • PDF export</p>
+        <div className="auth-container">
+          {/* Left Column: Form Controls */}
+          <div className="auth-left">
+            <header className="brand" style={{ marginBottom: '20px' }}>
+              <div className="logo">DC</div>
+              <div>
+                <h1 style={{ fontSize: '1.4rem' }}>Delivery Challan Portal</h1>
+                <p style={{ fontSize: '0.85rem' }}>Team access • Searchable history</p>
+              </div>
+            </header>
+
+            {recoveryMode ? (
+              <form onSubmit={updatePassword}>
+                <h2 style={{ fontSize: '1.6rem', marginBottom: '6px' }}>Reset Password</h2>
+                <p className="muted" style={{ marginBottom: '20px' }}>Enter your new secure password below.</p>
+                <label>
+                  New Password
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      minLength="8" 
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)} 
+                      required 
+                      autoComplete="new-password"
+                      style={{ width: '100%', paddingRight: '60px' }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </label>
+                <button className="primary full" disabled={busy} style={{ marginTop: '15px' }}>
+                  {busy ? 'Updating…' : 'Update Password'}
+                </button>
+                {message && <p className={isError ? 'error' : 'success'} style={{ marginTop: '15px' }}>{message}</p>}
+              </form>
+            ) : (
+              <form onSubmit={authSubmit}>
+                <h2 style={{ fontSize: '1.6rem', marginBottom: '6px' }}>
+                  {authMode === 'signin' ? 'Welcome back' : 'Create account'}
+                </h2>
+                <p className="muted" style={{ marginBottom: '20px' }}>
+                  Sign in to access your team's shared challans.
+                </p>
+
+                <label>
+                  Email address
+                  <input 
+                    type="email" 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    required 
+                    autoComplete="email"
+                  />
+                </label>
+
+                <label style={{ marginTop: '12px' }}>
+                  Password
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      minLength="8" 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      required 
+                      autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
+                      style={{ width: '100%', paddingRight: '60px' }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </label>
+
+                {authMode === 'signin' && (
+                  <div style={{ textAlign: 'right', marginTop: '6px', marginBottom: '16px' }}>
+                    <button 
+                      type="button" 
+                      className="linkbtn" 
+                      onClick={handleForgotPassword}
+                      style={{ fontSize: '0.85rem', padding: 0 }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
+
+                <button className="primary full" disabled={busy} style={{ marginTop: '10px' }}>
+                  {busy ? 'Please wait…' : authMode === 'signin' ? 'Sign in' : 'Create account'}
+                </button>
+                
+                <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                  <button 
+                    type="button" 
+                    className="linkbtn" 
+                    onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); notify(''); }}
+                  >
+                    {authMode === 'signin' ? "Need an account? Sign up" : "Already registered? Sign in"}
+                  </button>
+                </div>
+                
+                {message && <p className={isError ? 'error' : 'success'} style={{ marginTop: '15px' }}>{message}</p>}
+              </form>
+            )}
           </div>
-        </header>
-        <form className="card authform" onSubmit={authSubmit}>
-          <h2>{authMode === 'signin' ? 'Welcome back' : 'Create your account'}</h2>
-          <p className="muted">Sign in to access your team's shared challans.</p>
-          <label>
-            Email address
-            <input 
-              type="email" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-              required 
-              autoComplete="email"
-            />
-          </label>
-          <label>
-            Password
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input 
-                type={showPassword ? 'text' : 'password'} 
-                minLength="8" 
-                value={password} 
-                onChange={e => setPassword(e.target.value)} 
-                required 
-                autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
-                style={{ width: '100%', paddingRight: '60px' }}
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
-            </div>
-          </label>
 
-          {authMode === 'signin' && (
-            <div style={{ textAlign: 'right', marginBottom: '12px' }}>
-              <button 
-                type="button" 
-                className="linkbtn" 
-                onClick={handleForgotPassword}
-                style={{ fontSize: '0.85rem', padding: 0 }}
-              >
-                Forgot password?
-              </button>
+          {/* Right Column: Truck Route Illustration */}
+          <div className="auth-right">
+            <div className="auth-right-content">
+              <TruckGraphic />
+              <h3 style={{ marginTop: '15px', fontWeight: '500', opacity: 0.9 }}>
+                Track & Manage Deliveries
+              </h3>
             </div>
-          )}
-
-          <button className="primary full" disabled={busy}>
-            {busy ? 'Please wait…' : authMode === 'signin' ? 'Sign in' : 'Create account'}
-          </button>
-          
-          <button 
-            type="button" 
-            className="linkbtn" 
-            onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); notify(''); }}
-          >
-            {authMode === 'signin' ? "Need an account? Sign up" : "Already registered? Sign in"}
-          </button>
-          
-          {message && <p className={isError ? 'error' : 'success'}>{message}</p>}
-        </form>
+          </div>
+        </div>
       </main>
     );
   }
