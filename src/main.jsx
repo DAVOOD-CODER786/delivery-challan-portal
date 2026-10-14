@@ -142,24 +142,26 @@ function App() {
     else notify(authMode === 'signin' ? 'Signed in.' : 'Account created.');
   }
 
-  async function handleForgotPassword() {
-    if (!email) {
-      notify('Please enter your email address above first.', true);
-      return;
-    }
-    setBusy(true);
-    notify('');
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    });
-    setBusy(false);
-    if (error) {
-      notify(error.message, true);
-    } else {
-      notify('Password reset link sent! Check your email inbox.');
-    }
+async function handleForgotPassword() {
+  if (!email) {
+    notify('Please enter your email address above first.', true);
+    return;
   }
 
+  setBusy(true);
+  notify('');
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://delivery-challan-portal.vercel.app',
+  });
+
+  setBusy(false);
+  if (error) {
+    notify(error.message, true);
+  } else {
+    notify('Password reset link sent! Check your email inbox.');
+  }
+}
   async function updatePassword(e) {
     e.preventDefault();
     if (!newPassword || newPassword.length < 8) {
