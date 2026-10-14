@@ -97,30 +97,67 @@ function App() {
 
   const notify = (msg, error = false) => { setMessage(msg); setIsError(error); };
 
-  useEffect(() => {
-    if (!supabase) { setAuthReady(true); return; }
+useEffect(() => {
+  if (!supabase) {
+    setAuthReady(true);
+    return;
+  }
 
-    const hash = window.location.hash;
-    if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
+  const hashParams = new URLSearchParams(
+    window.location.hash.slice(1)
+  );
+  const queryParams = new URLSearchParams(
+    window.location.search
+  );
+
+  const isRecoveryLink =
+    hashParams.get('type') === 'recovery' ||
+    queryParams.get('type') === 'recovery';
+
+  if (isRecoveryLink) {
+    setRecoveryMode(true);
+  }
+
+  let mounted = true;
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event, s) => {
+    if (!mounted) return;
+
+    setSession(s);
+
+    if (event === 'PASSWORD_RECOVERY' || isRecoveryLink) {
       setRecoveryMode(true);
+      setNewPassword('');
+      setPassword('');
+      setMessage('');
     }
 
-    supabase.auth.getSession().then(({ data }) => { 
-      setSession(data.session); 
-      setAuthReady(true); 
-    });
-    
-    const { data: listener } = supabase.auth.onAuthStateChange((event, s) => {
-      setSession(s);
-      if (event === 'PASSWORD_RECOVERY') {
-        setRecoveryMode(true);
-        setNewPassword('');
-        setPassword('');
-        setMessage('');
-      }
-    });
-    return () => listener.subscription.unsubscribe();
-  }, []);
+    setAuthReady(true);
+  });
+
+  supabase.auth.getSession().then(({ data, error }) => {
+    if (!mounted) return;
+
+    if (error) {
+      setMessage(error.message);
+      setIsError(true);
+    }
+
+    setSession(data.session);
+    setAuthReady(true);
+
+    if (isRecoveryLink) {
+      setRecoveryMode(true);
+    }
+  });
+
+  return () => {
+    mounted = false;
+    subscription.unsubscribe();
+  };
+}, []);
 
   useEffect(() => { if (session && supabase) loadRecords(); }, [session]);
 
