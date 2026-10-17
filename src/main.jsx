@@ -341,7 +341,7 @@ async function handleForgotPassword() {
             </header>
 
             {recoveryMode ? (
-              <form onSubmit={updatePassword}>
+  <form onSubmit={updatePassword}>
                 <h2 style={{ fontSize: '1.6rem', marginBottom: '6px' }}>Reset Password</h2>
                 <p className="muted" style={{ marginBottom: '20px' }}>Enter your new secure password below.</p>
                 <label>
