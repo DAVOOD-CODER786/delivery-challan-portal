@@ -148,9 +148,8 @@ useEffect(() => {
     setSession(data.session);
     setAuthReady(true);
 
-    if (isRecoveryLink) {
-      setRecoveryMode(true);
-    }
+    setSession(data.session);
+setAuthReady(true);
   });
 
   return () => {
@@ -208,13 +207,17 @@ async function handleForgotPassword() {
     setBusy(true);
     notify('');
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      setBusy(false);
-      notify('Auth session missing or expired. Please request a new password reset link.', true);
-      return;
-    }
+    const { data: sessionData, error: sessionError } =
+  await supabase.auth.getSession();
 
+if (sessionError || !sessionData.session) {
+  setBusy(false);
+  notify(
+    'Your reset link has expired or no recovery session was created. Request a new reset link.',
+    true
+  );
+  return;
+}
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setBusy(false);
     if (error) {
