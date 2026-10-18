@@ -127,7 +127,7 @@ useEffect(() => {
 
     setSession(s);
 
-    if (event === 'PASSWORD_RECOVERY' || isRecoveryLink) {
+    if (event === 'PASSWORD_RECOVERY') {
       setRecoveryMode(true);
       setNewPassword('');
       setPassword('');
