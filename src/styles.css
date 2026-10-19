@@ -31,7 +31,6 @@ body {
   padding: 24px;
 }
 
-/* --- Auth / Login Screen (Left Unchanged) --- */
 .shell.auth {
   display: flex;
   align-items: center;
@@ -41,8 +40,7 @@ body {
 }
 
 .auth-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -53,6 +51,7 @@ body {
 }
 
 .auth-left {
+  flex: 1;
   padding: 40px;
   display: flex;
   flex-direction: column;
@@ -60,6 +59,7 @@ body {
 }
 
 .auth-right {
+  flex: 1;
   background: var(--primary);
   display: flex;
   align-items: center;
@@ -82,14 +82,13 @@ body {
 
 @media (max-width: 768px) {
   .auth-container {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
   .auth-right {
     display: none;
   }
 }
 
-/* --- Dashboard Topbar Header --- */
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -152,14 +151,8 @@ body {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text);
-  transition: background 0.2s;
 }
 
-.account button:hover {
-  background: var(--bg);
-}
-
-/* --- Navigation Tabs --- */
 .tabs {
   display: flex;
   gap: 8px;
@@ -185,7 +178,6 @@ body {
   border-bottom: 3px solid var(--primary);
 }
 
-/* --- Page Headings --- */
 .pagehead {
   display: flex;
   justify-content: space-between;
@@ -203,7 +195,6 @@ body {
   font-size: 0.9rem;
 }
 
-/* --- Stat Cards Grid (3 Columns) --- */
 .stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -233,7 +224,6 @@ body {
   color: var(--text);
 }
 
-/* --- Cards & Sections --- */
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -265,11 +255,6 @@ body {
   color: var(--primary);
 }
 
-.sectionhead button:hover {
-  background: var(--bg);
-}
-
-/* --- Form Layouts (Matching Create DC Reference) --- */
 .dcform h3 {
   font-size: 1.1rem;
   font-weight: 600;
@@ -289,6 +274,7 @@ body {
   gap: 6px;
   font-size: 0.9rem;
   font-weight: 500;
+  margin-bottom: 12px;
 }
 
 .required {
@@ -334,17 +320,14 @@ input:focus, select:focus, textarea:focus {
   padding-top: 20px;
 }
 
-.formactions button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 button.primary {
   background: var(--primary);
   color: #fff;
   border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 button.primary:hover {
@@ -362,7 +345,6 @@ button.primary:hover {
   height: 42px;
 }
 
-/* --- Empty State & Tables --- */
 .empty {
   text-align: center;
   padding: 40px 20px;
@@ -398,7 +380,6 @@ th {
   background: var(--bg);
 }
 
-/* --- Alerts --- */
 .alert {
   padding: 12px 16px;
   border-radius: 8px;
@@ -417,14 +398,6 @@ th {
 .alert.error {
   background: var(--error-bg);
   color: var(--error-text);
-}
-
-.alert button {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: inherit;
 }
 
 footer {
