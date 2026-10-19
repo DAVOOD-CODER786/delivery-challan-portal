@@ -88,9 +88,9 @@ function App() {
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
     const queryParams = new URLSearchParams(window.location.search);
 
-    if (hashParams.get('type') === 'recovery' || queryParams.get('type') === 'recovery') {
-      setRecoveryMode(true);
-    }
+    const isRecoveryLink =
+      hashParams.get('type') === 'recovery' ||
+      queryParams.get('type') === 'recovery';
 
     let mounted = true;
 
@@ -113,6 +113,9 @@ function App() {
         setIsError(true);
       }
       setSession(data.session);
+      if (isRecoveryLink && data.session) {
+        setRecoveryMode(true);
+      }
       setAuthReady(true);
     });
 
@@ -122,7 +125,7 @@ function App() {
     };
   }, []);
 
-  useEffect(() => { if (session && supabase) loadRecords(); }, [session]);
+  useEffect(() => { if (session && supabase && !recoveryMode) loadRecords(); }, [session, recoveryMode]);
 
   async function loadRecords() {
     setBusy(true);
@@ -177,6 +180,8 @@ function App() {
     }
     setBusy(true);
     notify('');
+
+    await supabase.auth.getSession();
 
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setBusy(false);
@@ -243,7 +248,12 @@ function App() {
     return `${prefix}${String(n + 1).padStart(3, '0')}`;
   }
 
-  async function signOut() { await supabase.auth.signOut(); setRecords([]); setPreview(null); }
+  async function signOut() { 
+    await supabase.auth.signOut(); 
+    setRecords([]); 
+    setPreview(null); 
+    setRecoveryMode(false);
+  }
 
   const filtered = useMemo(() => records.filter(r => {
     const hay = [r.dc_number, r.vehicle_number, r.receiver_name, r.driver_name, r.from_address, r.to_address, ...(r.materials || []).map(m => m.name)].join(' ').toLowerCase();
@@ -269,7 +279,7 @@ function App() {
 
   if (!authReady) return <main className="shell"><p>Loading portal…</p></main>;
 
-  if (!session) {
+  if (!session || recoveryMode) {
     return (
       <main className="shell auth">
         <div className="auth-container">
