@@ -28,48 +28,30 @@ const clean = v => String(v ?? '').trim();
 function TruckGraphic() {
   return (
     <svg className="truck-graphic" viewBox="0 0 500 350" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Background City Silhouette */}
       <path d="M50 220V150H90V220H130V120H170V220H230V100H280V220H340V140H380V220H450V220Z" fill="#0d593b" opacity="0.5"/>
-      
-      {/* Winding Road */}
       <path d="M-20 280 C 150 280, 200 180, 520 180" stroke="#ffffff" strokeWidth="36" opacity="0.2" strokeLinecap="round"/>
       <path d="M-20 280 C 150 280, 200 180, 520 180" stroke="#ffffff" strokeWidth="2" strokeDasharray="12 12" opacity="0.6"/>
-
-      {/* Map Pins */}
       <g fill="#E5C158">
         <path d="M120 160 C120 150, 135 135, 135 120 C135 110, 128 100, 120 100 C112 100, 105 110, 105 120 C105 135, 120 150, 120 160 Z"/>
         <circle cx="120" cy="120" r="5" fill="#0b4d33"/>
-
         <path d="M380 130 C380 120, 395 105, 395 90 C395 80, 388 70, 380 70 C372 70, 365 80, 365 90 C365 105, 380 120, 380 130 Z"/>
         <circle cx="380" cy="90" r="5" fill="#0b4d33"/>
-
         <path d="M260 250 C260 240, 275 225, 275 210 C275 200, 268 190, 260 190 C252 190, 245 200, 245 210 C245 225, 260 240, 260 250 Z"/>
         <circle cx="260" cy="210" r="5" fill="#0b4d33"/>
       </g>
-
-      {/* Delivery Truck */}
       <g transform="translate(160, 185)">
-        {/* Cargo Body */}
         <rect x="0" y="0" width="130" height="70" rx="6" fill="#FFFFFF" />
         <rect x="10" y="10" width="110" height="50" rx="3" fill="#E8EFEC" />
-        {/* DC Logo on Truck */}
         <rect x="45" y="20" width="30" height="30" rx="6" fill="#0b4d33" />
         <text x="60" y="40" fill="#FFFFFF" fontSize="14" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">DC</text>
-        
-        {/* Truck Cabin */}
         <path d="M130 20 H160 L180 45 V70 H130 Z" fill="#2E7D5B" />
-        {/* Windshield */}
         <path d="M142 26 H158 L170 42 H142 Z" fill="#A3D9C9" />
-        
-        {/* Wheels */}
         <circle cx="30" cy="72" r="16" fill="#1F2923" />
         <circle cx="30" cy="72" r="7" fill="#E8EFEC" />
         <circle cx="100" cy="72" r="16" fill="#1F2923" />
         <circle cx="100" cy="72" r="7" fill="#E8EFEC" />
         <circle cx="155" cy="72" r="16" fill="#1F2923" />
         <circle cx="155" cy="72" r="7" fill="#E8EFEC" />
-        
-        {/* Headlight */}
         <path d="M180 52 H184 V60 H180 Z" fill="#E5C158" />
       </g>
     </svg>
@@ -97,61 +79,48 @@ function App() {
 
   const notify = (msg, error = false) => { setMessage(msg); setIsError(error); };
 
-useEffect(() => {
-  if (!supabase) {
-    setAuthReady(true);
-    return;
-  }
-
-  const hashParams = new URLSearchParams(
-    window.location.hash.slice(1)
-  );
-  const queryParams = new URLSearchParams(
-    window.location.search
-  );
-
-const isRecoveryLink =
-  hashParams.get('type') === 'recovery' ||
-  queryParams.get('type') === 'recovery';
-
-let mounted = true;
-
-const {
-  data: { subscription },
-} = supabase.auth.onAuthStateChange((event, s) => {
-  if (!mounted) return;
-
-  setSession(s);
-
-  if (event === 'PASSWORD_RECOVERY') {
-    setRecoveryMode(true);
-    setNewPassword('');
-    setPassword('');
-    setMessage('');
-  }
-
-  setAuthReady(true);
-});
-  supabase.auth.getSession().then(({ data, error }) => {
-    if (!mounted) return;
-
-    if (error) {
-      setMessage(error.message);
-      setIsError(true);
+  useEffect(() => {
+    if (!supabase) {
+      setAuthReady(true);
+      return;
     }
 
-    setSession(data.session);
-    setAuthReady(true);
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const queryParams = new URLSearchParams(window.location.search);
 
-    setSession(data.session);
-setAuthReady(true);
-  });
+    if (hashParams.get('type') === 'recovery' || queryParams.get('type') === 'recovery') {
+      setRecoveryMode(true);
+    }
 
-  return () => {
-    mounted = false;
-    subscription.unsubscribe();
-  };
-}, []);
+    let mounted = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (!mounted) return;
+      setSession(s);
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true);
+        setNewPassword('');
+        setPassword('');
+        setMessage('');
+      }
+      setAuthReady(true);
+    });
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error) {
+        setMessage(error.message);
+        setIsError(true);
+      }
+      setSession(data.session);
+      setAuthReady(true);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => { if (session && supabase) loadRecords(); }, [session]);
 
@@ -163,36 +132,43 @@ setAuthReady(true);
   }
 
   async function authSubmit(e) {
-    e.preventDefault(); setBusy(true); notify('');
+    e.preventDefault(); 
+    setBusy(true); 
+    notify('');
+    
     const result = authMode === 'signin'
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password });
+      
     setBusy(false);
-    if (result.error) notify(result.error.message, true);
-    else if (authMode === 'signup' && !result.data.session) notify('Account created. Check your email to confirm the account before signing in.');
-    else notify(authMode === 'signin' ? 'Signed in.' : 'Account created.');
+    
+    if (result.error) {
+      notify(result.error.message, true);
+    } else if (authMode === 'signup' && !result.data.session) {
+      notify('Account created. Check your email to confirm the account before signing in.');
+    } else {
+      notify(authMode === 'signin' ? 'Signed in successfully.' : 'Account created and signed in.');
+    }
   }
 
-async function handleForgotPassword() {
-  if (!email) {
-    notify('Please enter your email address above first.', true);
-    return;
+  async function handleForgotPassword() {
+    if (!email) {
+      notify('Please enter your email address above first.', true);
+      return;
+    }
+    setBusy(true);
+    notify('');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    setBusy(false);
+    if (error) {
+      notify(error.message, true);
+    } else {
+      notify('Password reset link sent! Check your email inbox.');
+    }
   }
 
-  setBusy(true);
-  notify('');
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://delivery-challan-portal.vercel.app',
-  });
-
-  setBusy(false);
-  if (error) {
-    notify(error.message, true);
-  } else {
-    notify('Password reset link sent! Check your email inbox.');
-  }
-}
   async function updatePassword(e) {
     e.preventDefault();
     if (!newPassword || newPassword.length < 8) {
@@ -202,17 +178,6 @@ async function handleForgotPassword() {
     setBusy(true);
     notify('');
 
-    const { data: sessionData, error: sessionError } =
-  await supabase.auth.getSession();
-
-if (sessionError || !sessionData.session) {
-  setBusy(false);
-  notify(
-    'Your reset link has expired or no recovery session was created. Request a new reset link.',
-    true
-  );
-  return;
-}
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setBusy(false);
     if (error) {
@@ -304,31 +269,10 @@ if (sessionError || !sessionData.session) {
 
   if (!authReady) return <main className="shell"><p>Loading portal…</p></main>;
 
-  if (!supabase) return (
-    <main className="shell">
-      <header className="brand">
-        <div className="logo">DC</div>
-        <div><h1>Delivery Challan Portal</h1><p>Shared challan history for your team</p></div>
-      </header>
-      <section className="card setup">
-        <h2>Connect your shared database</h2>
-        <p>This project is ready to connect to Supabase for secure sign-in and shared records.</p>
-        <ol>
-          <li>Create a project at <a href="https://supabase.com" target="_blank" rel="noreferrer">supabase.com</a>.</li>
-          <li>In the SQL Editor, run <code>supabase/schema.sql</code> from this project.</li>
-          <li>Copy your project URL and publishable/anon key into a new <code>.env</code> file using <code>.env.example</code>.</li>
-          <li>Run <code>npm install</code> and <code>npm run dev</code>, or deploy the project to a static host with those environment variables.</li>
-        </ol>
-        <p className="note">Do not put a Supabase service-role key in browser code. The app uses authenticated sessions and database row-level security.</p>
-      </section>
-    </main>
-  );
-
   if (!session) {
     return (
       <main className="shell auth">
         <div className="auth-container">
-          {/* Left Column: Form Controls */}
           <div className="auth-left">
             <header className="brand" style={{ marginBottom: '20px' }}>
               <div className="logo">DC</div>
@@ -339,7 +283,7 @@ if (sessionError || !sessionData.session) {
             </header>
 
             {recoveryMode ? (
-  <form onSubmit={updatePassword}>
+              <form onSubmit={updatePassword}>
                 <h2 style={{ fontSize: '1.6rem', marginBottom: '6px' }}>Reset Password</h2>
                 <p className="muted" style={{ marginBottom: '20px' }}>Enter your new secure password below.</p>
                 <label>
@@ -442,7 +386,6 @@ if (sessionError || !sessionData.session) {
             )}
           </div>
 
-          {/* Right Column: Truck Route Illustration */}
           <div className="auth-right">
             <div className="auth-right-content">
               <TruckGraphic />
