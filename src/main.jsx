@@ -146,7 +146,10 @@ function App() {
     setBusy(false);
     
     if (result.error) {
-      notify(result.error.message, true);
+      const errMsg = result.error.message.toLowerCase().includes('invalid login credentials')
+        ? 'Incorrect password or email. Please try again.'
+        : result.error.message;
+      notify(errMsg, true);
     } else if (authMode === 'signup' && !result.data.session) {
       notify('Account created. Check your email to confirm the account before signing in.');
     } else {
@@ -352,7 +355,7 @@ function App() {
                       onChange={e => setPassword(e.target.value)} 
                       required 
                       autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
-                      style={{ width: '100%', paddingRight: '60px' }}
+                      style={{ width: '100%', paddingRight: '60px', borderColor: isError ? '#e53e3e' : undefined }}
                     />
                     <button 
                       type="button" 
@@ -364,13 +367,19 @@ function App() {
                   </div>
                 </label>
 
+                {/* Incorrect Password Error Message in Red right under Password input */}
+                {message && isError && (
+                  <p style={{ color: '#e53e3e', fontSize: '0.85rem', fontWeight: '600', marginTop: '4px', marginBottom: '8px' }}>
+                    {message}
+                  </p>
+                )}
+
                 {authMode === 'signin' && (
                   <div style={{ textAlign: 'right', marginTop: '6px', marginBottom: '16px' }}>
                     <button 
                       type="button" 
                       className="linkbtn" 
                       onClick={handleForgotPassword}
-                      style={{ fontSize: '0.85rem', padding: 0 }}
                     >
                       Forgot password?
                     </button>
@@ -390,8 +399,6 @@ function App() {
                     {authMode === 'signin' ? "Need an account? Sign up" : "Already registered? Sign in"}
                   </button>
                 </div>
-                
-                {message && <p className={isError ? 'error' : 'success'} style={{ marginTop: '15px' }}>{message}</p>}
               </form>
             )}
           </div>
