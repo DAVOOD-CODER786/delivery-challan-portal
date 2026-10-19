@@ -110,33 +110,28 @@ useEffect(() => {
     window.location.search
   );
 
-  const isRecoveryLink =
-    hashParams.get('type') === 'recovery' ||
-    queryParams.get('type') === 'recovery';
+const isRecoveryLink =
+  hashParams.get('type') === 'recovery' ||
+  queryParams.get('type') === 'recovery';
 
-  if (isRecoveryLink) {
+let mounted = true;
+
+const {
+  data: { subscription },
+} = supabase.auth.onAuthStateChange((event, s) => {
+  if (!mounted) return;
+
+  setSession(s);
+
+  if (event === 'PASSWORD_RECOVERY') {
     setRecoveryMode(true);
+    setNewPassword('');
+    setPassword('');
+    setMessage('');
   }
 
-  let mounted = true;
-
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((event, s) => {
-    if (!mounted) return;
-
-    setSession(s);
-
-    if (event === 'PASSWORD_RECOVERY') {
-      setRecoveryMode(true);
-      setNewPassword('');
-      setPassword('');
-      setMessage('');
-    }
-
-    setAuthReady(true);
-  });
-
+  setAuthReady(true);
+});
   supabase.auth.getSession().then(({ data, error }) => {
     if (!mounted) return;
 
