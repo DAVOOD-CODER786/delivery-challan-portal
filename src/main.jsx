@@ -12,26 +12,14 @@ const supabase = url && key && !url.includes('YOUR_PROJECT') ? createClient(url,
 const blank = () => ({
   dc_date: new Date().toISOString().slice(0, 10),
   dc_number: '',
-  purchase_order_no: 'PO-12345',
-  dispatch_doc_no: 'TRANSFER',
-  transport_mode: 'VRL LOGISTICS',
-  vehicle_number: '-',
-  lr_number: '-',
-  mode_of_payment: 'Online / Bank Transfer',
-  terms_of_delivery: 'Our own materials moved from one site to another.',
-  other_references: '-',
-  ship_from_company: 'AtomPlus Technologies Private Limited',
-  ship_from_address: 'No. D-1902, 19th Floor, Tower D,\nShriram Greenfields, Bommanahalli Village,\nBangalore - Karnataka 560049, India.',
-  ship_from_phone: '+91 80 0000 0000',
-  ship_to_company: 'ABC Enterprises',
-  ship_to_address: 'Plot No. 45, Industrial Area,\nSolapur - 413001, Maharashtra, India',
-  ship_to_contact: 'Mr. Ramesh Patil - 9876543210',
-  materials: [
-    { name: 'SS 304 Flexible Hose pipe-2" (1500 mm)', hsn: '83071000', qty: 2, unit: 'Nos', rate: 3500 },
-    { name: 'SS 304 Elbow 90°', hsn: '73079200', qty: 5, unit: 'Nos', rate: 450 },
-    { name: 'SS 304 Tee Connector', hsn: '73079300', qty: 3, unit: 'Nos', rate: 380 },
-    { name: 'SS 304 Clamp', hsn: '83071000', qty: 10, unit: 'Nos', rate: 120 }
-  ]
+  from_address: '',
+  to_address: '',
+  vehicle_number: '',
+  driver_name: '',
+  driver_phone: '',
+  receiver_name: '',
+  receiver_phone: '',
+  materials: [{ name: '', qty: '', unit: 'Nos' }]
 });
 
 const fmtDate = s => s ? new Date(`${s}T00:00:00`).toLocaleDateString('en-IN') : '';
@@ -99,7 +87,10 @@ function App() {
 
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
     const queryParams = new URLSearchParams(window.location.search);
-    const isRecoveryLink = hashParams.get('type') === 'recovery' || queryParams.get('type') === 'recovery';
+
+    const isRecoveryLink =
+      hashParams.get('type') === 'recovery' ||
+      queryParams.get('type') === 'recovery';
 
     let mounted = true;
 
@@ -192,7 +183,9 @@ function App() {
     }
     setBusy(true);
     notify('');
+
     await supabase.auth.getSession();
+
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setBusy(false);
     if (error) {
@@ -209,14 +202,25 @@ function App() {
   function setMaterial(i, k, v) { setForm(p => ({ ...p, materials: p.materials.map((m, j) => i === j ? { ...m, [k]: v } : m) })); }
 
   function validate() {
-    if (!clean(form.ship_from_address)) return 'Dispatch address is required.';
-    if (!clean(form.ship_to_address)) return 'Delivery address is required.';
+    const required = [
+      ['dc_date', 'DC date'],
+      ['from_address', 'Dispatch address'],
+      ['to_address', 'Delivery address'],
+      ['vehicle_number', 'Vehicle number'],
+      ['driver_name', 'Driver name'],
+      ['driver_phone', 'Driver mobile'],
+      ['receiver_name', 'Receiver name'],
+      ['receiver_phone', 'Receiver mobile']
+    ];
+    for (const [k, label] of required) if (!clean(form[k])) return `${label} is required.`;
+    const phone = /^\+?[\d\s()-]{7,20}$/;
+    if (!phone.test(form.driver_phone)) return 'Enter a valid driver mobile number.';
+    if (!phone.test(form.receiver_phone)) return 'Enter a valid receiver mobile number.';
     if (!form.materials.length) return 'Add at least one material.';
     for (let i = 0; i < form.materials.length; i++) {
       const m = form.materials[i];
       if (!clean(m.name)) return `Material ${i + 1}: name is required.`;
       if (!Number.isFinite(Number(m.qty)) || Number(m.qty) <= 0) return `Material ${i + 1}: quantity must be greater than zero.`;
-      if (!Number.isFinite(Number(m.rate)) || Number(m.rate) < 0) return `Material ${i + 1}: rate must be valid.`;
       if (!clean(m.unit)) return `Material ${i + 1}: unit is required.`;
     }
     return '';
@@ -229,14 +233,7 @@ function App() {
     setBusy(true); notify('');
     try {
       const dc_number = clean(form.dc_number) || await nextNumber();
-      const row = { 
-        ...form, 
-        dc_number, 
-        from_address: form.ship_from_address,
-        to_address: form.ship_to_address,
-        materials: form.materials.map(m => ({ ...m, name: clean(m.name), qty: Number(m.qty), rate: Number(m.rate), unit: clean(m.unit) })), 
-        created_by: session.user.id 
-      };
+      const row = { ...form, dc_number, materials: form.materials.map(m => ({ ...m, name: clean(m.name), qty: Number(m.qty), unit: clean(m.unit) })), created_by: session.user.id };
       const { data, error } = await supabase.from('delivery_challans').insert(row).select().single();
       if (error) throw error;
       setRecords(p => [data, ...p]); setPreview(data); setForm(blank()); setActive('history');
@@ -262,97 +259,22 @@ function App() {
   }
 
   const filtered = useMemo(() => records.filter(r => {
-    const hay = [r.dc_number, r.vehicle_number, r.ship_to_company, r.ship_from_company, r.ship_from_address, r.ship_to_address, ...(r.materials || []).map(m => m.name)].join(' ').toLowerCase();
+    const hay = [r.dc_number, r.vehicle_number, r.receiver_name, r.driver_name, r.from_address, r.to_address, ...(r.materials || []).map(m => m.name)].join(' ').toLowerCase();
     return (!search || hay.includes(search.toLowerCase())) && (!dateFilter || r.dc_date === dateFilter);
   }), [records, search, dateFilter]);
 
   const today = new Date().toISOString().slice(0, 10);
 
-  function calculateTotal(items) {
-    return (items || []).reduce((acc, item) => acc + (Number(item.qty || item.quantity || 0) * Number(item.rate || 0)), 0);
-  }
-
   function downloadPDF(r) {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    
-    // Header
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(0, 51, 102);
-    doc.text('AtomPlus Technologies Private Limited', 14, 15);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
-    doc.text('https://atomplus.in', 14, 20);
-    doc.text('Registered Office: No. D-1902, 19th Floor, Tower D, Shriram Greenfields, Bommanahalli Village, Bangalore - Karnataka 560049, India.', 14, 24);
-    doc.text('CIN: U40106KA2022PTC165701', 14, 28);
-    
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(0, 51, 102);
-    doc.text('Innovative Solutions', 196, 16, { align: 'right' });
-    doc.text('for a Better Tomorrow', 196, 21, { align: 'right' });
-
-    doc.setDrawColor(0, 51, 102); doc.setLineWidth(0.5);
-    doc.line(14, 32, 196, 32);
-
-    // Title Bar
-    doc.setFillColor(0, 51, 102);
-    doc.rect(14, 35, 182, 7, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-    doc.text('DELIVERY CHALLAN', 105, 40, { align: 'center' });
-
-    // Meta Info Table
-    autoTable(doc, {
-      startY: 44,
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2, textColor: [0, 0, 0], lineColor: [0, 51, 102] },
-      headStyles: { fillColor: [230, 240, 250], textColor: [0, 51, 102], fontStyle: 'bold' },
-      body: [
-        [
-          { content: 'Ship From (Dispatch Address)\n\n' + (r.ship_from_company || 'AtomPlus Technologies Private Limited') + '\n' + (r.ship_from_address || r.from_address || ''), styles: { cellWidth: 70 } },
-          { content: 'DC No.: ' + (r.dc_number || '') + '\n\nPurchase Order No.: ' + (r.purchase_order_no || '-') + '\n\nDispatch Doc No.: ' + (r.dispatch_doc_no || 'TRANSFER') + '\n\nBill of Lading / LR-RR No.: ' + (r.lr_number || '-'), styles: { cellWidth: 56 } },
-          { content: 'Date: ' + fmtDate(r.dc_date) + '\n\nTerms of Delivery:\n' + (r.terms_of_delivery || 'Our own materials moved from one site to another.') + '\n\nTransport Mode: ' + (r.transport_mode || 'VRL LOGISTICS') + '\n\nVehicle No.: ' + (r.vehicle_number || '-'), styles: { cellWidth: 56 } }
-        ]
-      ]
-    });
-
-    // Items Table
-    const itemsBody = (r.materials || []).map((m, i) => [
-      i + 1,
-      m.name,
-      m.hsn || '83071000',
-      m.unit || 'Nos',
-      m.qty || m.quantity || 0,
-      `₹ ${(Number(m.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`,
-      `₹ ${(Number(m.qty || m.quantity || 0) * Number(m.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-    ]);
-
-    itemsBody.push([
-      { content: 'TOTAL', colSpan: 6, styles: { fontStyle: 'bold', halign: 'right' } },
-      { content: `₹ ${calculateTotal(r.materials).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, styles: { fontStyle: 'bold' } }
-    ]);
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY,
-      theme: 'grid',
-      head: [['SNO', 'Description of Goods', 'HSN/SAC', 'UNIT', 'Quantity', 'Rate', 'Amount']],
-      body: itemsBody,
-      styles: { fontSize: 8, cellPadding: 2, lineColor: [0, 51, 102], textColor: [0, 0, 0] },
-      headStyles: { fillColor: [210, 225, 245], textColor: [0, 51, 102], fontStyle: 'bold', halign: 'center' },
-      columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 2: { halign: 'center', cellWidth: 25 }, 3: { halign: 'center', cellWidth: 15 }, 4: { halign: 'center', cellWidth: 18 }, 5: { halign: 'right', cellWidth: 25 }, 6: { halign: 'right', cellWidth: 27 } }
-    });
-
-    const finalY = doc.lastAutoTable.finalY;
-    doc.setFillColor(255, 229, 153);
-    doc.rect(14, finalY, 182, 6, 'F');
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(0, 51, 102);
-    doc.text(r.terms_of_delivery || 'Our own materials moved from one site to another.', 105, finalY + 4, { align: 'center' });
-
-    // Signature Block
-    const sigY = finalY + 25;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
-    doc.text('This is a computer-generated delivery challan.', 14, sigY);
-    doc.setDrawColor(0, 51, 102); doc.line(140, sigY - 4, 196, sigY - 4);
-    doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 51, 102);
-    doc.text('Authorised Signature', 168, sigY, { align: 'center' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 100, 100);
-    doc.text('For AtomPlus Technologies Pvt. Ltd.', 168, sigY + 4, { align: 'center' });
-
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(19); doc.text('DELIVERY CHALLAN', 105, 18, { align: 'center' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(`DC Number: ${r.dc_number}`, 14, 29); doc.text(`Date: ${fmtDate(r.dc_date)}`, 196, 29, { align: 'right' });
+    autoTable(doc, { startY: 35, head: [['DISPATCH FROM', 'DELIVER TO']], body: [[r.from_address, r.to_address]], styles: { fontSize: 9, cellPadding: 4, overflow: 'linebreak' }, headStyles: { fillColor: [232, 239, 235], textColor: [20, 40, 32] } });
+    autoTable(doc, { startY: doc.lastAutoTable.finalY + 7, head: [['Sr.', 'Material description', 'Quantity', 'Unit']], body: (r.materials || []).map((m, i) => [i + 1, m.name, m.qty, m.unit]), styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: [232, 239, 235], textColor: [20, 40, 32] } });
+    autoTable(doc, { startY: doc.lastAutoTable.finalY + 7, head: [['TRANSPORT DETAILS', 'DETAILS']], body: [['Vehicle number', r.vehicle_number], ['Driver name', r.driver_name], ['Driver mobile', r.driver_phone], ['Receiver name', r.receiver_name], ['Receiver mobile', r.receiver_phone]], styles: { fontSize: 9, cellPadding: 3 }, headStyles: { fillColor: [232, 239, 235], textColor: [20, 40, 32] } });
+    const y = Math.min(doc.lastAutoTable.finalY + 24, 270);
+    doc.setFontSize(9); doc.text('Authorized Signatory', 18, y); doc.text('Receiver Signature', 145, y);
+    doc.line(14, y - 5, 75, y - 5); doc.line(140, y - 5, 196, y - 5);
     doc.save(`${r.dc_number.replace(/[^a-z0-9-_]/gi, '_')}.pdf`);
   }
 
@@ -366,9 +288,9 @@ function App() {
         <div className="auth-container">
           <div className="auth-left">
             <header className="brand" style={{ marginBottom: '20px' }}>
-              <div className="logo">A+</div>
+              <div className="logo">DC</div>
               <div>
-                <h1 style={{ fontSize: '1.4rem' }}>AtomPlus Challan Portal</h1>
+                <h1 style={{ fontSize: '1.4rem' }}>Delivery Challan Portal</h1>
                 <p style={{ fontSize: '0.85rem' }}>Team access • Searchable history</p>
               </div>
             </header>
@@ -392,7 +314,7 @@ function App() {
                     <button 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
-                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#003366', fontWeight: 'bold' }}
+                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
                     >
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
@@ -438,13 +360,14 @@ function App() {
                     <button 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
-                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#003366', fontWeight: 'bold' }}
+                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: '#006644', fontWeight: 'bold' }}
                     >
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
                   </div>
                 </label>
 
+                {/* Incorrect Password Error Message in Red right under Password input */}
                 {message && isError && (
                   <p style={{ color: '#e53e3e', fontSize: '0.85rem', fontWeight: '600', marginTop: '4px', marginBottom: '8px' }}>
                     {message}
@@ -497,8 +420,8 @@ function App() {
     <main className="shell">
       <header className="topbar">
         <div className="brand">
-          <div className="logo">A+</div>
-          <div><h1>AtomPlus Portal</h1><p>Delivery Challan System</p></div>
+          <div className="logo">DC</div>
+          <div><h1>Delivery Challan</h1><p>Management Portal</p></div>
         </div>
         <div className="account">
           <span>{session.user.email}</span>
@@ -537,46 +460,43 @@ function App() {
 
       {active === 'create' && (
         <>
-          <div className="pagehead"><div><h2>Create delivery challan</h2><p>Complete the details with HSN codes, pricing, and transport mode.</p></div></div>
+          <div className="pagehead"><div><h2>Create delivery challan</h2><p>Complete the details, then save the DC to shared history.</p></div></div>
           <form className="card dcform" onSubmit={createDC}>
             <h3>Challan details</h3>
             <div className="formgrid">
               <Field label="DC date" required><input type="date" value={form.dc_date} onChange={e => setField('dc_date', e.target.value)} required /></Field>
               <Field label="DC number" hint="Leave blank to suggest a number"><input value={form.dc_number} onChange={e => setField('dc_number', e.target.value)} placeholder="Auto-suggested on save" /></Field>
-              <Field label="Purchase order No"><input value={form.purchase_order_no} onChange={e => setField('purchase_order_no', e.target.value)} /></Field>
-              <Field label="Dispatch doc No"><input value={form.dispatch_doc_no} onChange={e => setField('dispatch_doc_no', e.target.value)} /></Field>
-              <Field label="Transport Mode">
-                <select value={form.transport_mode} onChange={e => setField('transport_mode', e.target.value)}>
-                  {['VRL LOGISTICS', 'DTDC', 'OWN VEHICLE', 'BLUE DART'].map(m => <option key={m}>{m}</option>)}
-                </select>
-              </Field>
-              <Field label="Vehicle number"><input value={form.vehicle_number} onChange={e => setField('vehicle_number', e.target.value.toUpperCase())} /></Field>
-              <Field label="Bill of lading / LR-RR No"><input value={form.lr_number} onChange={e => setField('lr_number', e.target.value)} /></Field>
-              <Field label="Terms of delivery"><input value={form.terms_of_delivery} onChange={e => setField('terms_of_delivery', e.target.value)} /></Field>
-              <Field label="Dispatch from address" required><textarea value={form.ship_from_address} onChange={e => setField('ship_from_address', e.target.value)} rows="3" required /></Field>
-              <Field label="Delivery to address" required><textarea value={form.ship_to_address} onChange={e => setField('ship_to_address', e.target.value)} rows="3" required /></Field>
+              <Field label="Dispatch from address" required><textarea value={form.from_address} onChange={e => setField('from_address', e.target.value)} rows="3" required placeholder="Company, street, city, PIN" /></Field>
+              <Field label="Delivery to address" required><textarea value={form.to_address} onChange={e => setField('to_address', e.target.value)} rows="3" required placeholder="Company, street, city, PIN" /></Field>
             </div>
-
             <div className="sectionhead">
-              <h3>Material list & pricing</h3>
-              <button type="button" onClick={() => setForm(p => ({ ...p, materials: [...p.materials, { name: '', hsn: '83071000', qty: 1, unit: 'Nos', rate: 0 }] }))}>+ Add material</button>
+              <h3>Material list</h3>
+              <button type="button" onClick={() => setForm(p => ({ ...p, materials: [...p.materials, { name: '', qty: '', unit: 'Nos' }] }))}>+ Add material</button>
             </div>
             {form.materials.map((m, i) => (
-              <div className="materialrow" key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: '8px', alignItems: 'end', marginBottom: '10px' }}>
+              <div className="materialrow" key={i}>
                 <Field label={`Material ${i + 1}`} required><input value={m.name} onChange={e => setMaterial(i, 'name', e.target.value)} required placeholder="Material name" /></Field>
-                <Field label="HSN/SAC"><input value={m.hsn} onChange={e => setMaterial(i, 'hsn', e.target.value)} placeholder="HSN code" /></Field>
-                <Field label="Quantity" required><input type="number" min="0.001" step="any" value={m.qty} onChange={e => setMaterial(i, 'qty', e.target.value)} required /></Field>
+                <Field label="Quantity" required><input type="number" min="0.001" step="any" value={m.qty} onChange={e => setMaterial(i, 'qty', e.target.value)} required placeholder="0" /></Field>
                 <Field label="Unit" required>
                   <select value={m.unit} onChange={e => setMaterial(i, 'unit', e.target.value)}>
                     {['Nos', 'Kg', 'Ton', 'Meters', 'Boxes', 'Litres', 'Other'].map(u => <option key={u}>{u}</option>)}
                   </select>
                 </Field>
-                <Field label="Rate (₹)" required><input type="number" min="0" step="any" value={m.rate} onChange={e => setMaterial(i, 'rate', e.target.value)} required /></Field>
                 {form.materials.length > 1 && <button type="button" className="remove" onClick={() => setForm(p => ({ ...p, materials: p.materials.filter((_, j) => j !== i) }))}>Remove</button>}
               </div>
             ))}
-
-            <div className="formactions" style={{ marginTop: '20px' }}>
+            <h3 className="subhead">Vehicle and driver</h3>
+            <div className="formgrid">
+              <Field label="Vehicle number" required><input value={form.vehicle_number} onChange={e => setField('vehicle_number', e.target.value.toUpperCase())} required placeholder="e.g. MH 13 AB 1234" /></Field>
+              <Field label="Driver name" required><input value={form.driver_name} onChange={e => setField('driver_name', e.target.value)} required /></Field>
+              <Field label="Driver mobile number" required><input type="tel" value={form.driver_phone} onChange={e => setField('driver_phone', e.target.value)} required placeholder="Mobile number" /></Field>
+            </div>
+            <h3 className="subhead">Receiver details</h3>
+            <div className="formgrid">
+              <Field label="Receiver name" required><input value={form.receiver_name} onChange={e => setField('receiver_name', e.target.value)} required /></Field>
+              <Field label="Receiver mobile number" required><input type="tel" value={form.receiver_phone} onChange={e => setField('receiver_phone', e.target.value)} required placeholder="Mobile number" /></Field>
+            </div>
+            <div className="formactions">
               <button type="button" onClick={() => setForm(blank())}>Clear form</button>
               <button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Validate & Save DC'}</button>
             </div>
@@ -592,7 +512,7 @@ function App() {
           </div>
           <section className="card">
             <div className="filters">
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search DC, vehicle, material…" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search DC, vehicle, receiver, material…" />
               <input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} aria-label="Filter by date" />
               <button onClick={() => { setSearch(''); setDateFilter(''); }}>Clear filters</button>
               <button onClick={loadRecords} disabled={busy}>{busy ? 'Loading…' : 'Refresh'}</button>
@@ -640,7 +560,7 @@ function RecordTable({ records, onView, onPDF }) {
             <th>DC number</th>
             <th>Date</th>
             <th>Vehicle</th>
-            <th>Transport Mode</th>
+            <th>Receiver</th>
             <th>Materials</th>
             <th>Actions</th>
           </tr>
@@ -651,7 +571,7 @@ function RecordTable({ records, onView, onPDF }) {
               <td><strong>{r.dc_number}</strong></td>
               <td>{fmtDate(r.dc_date)}</td>
               <td>{r.vehicle_number}</td>
-              <td>{r.transport_mode || 'VRL LOGISTICS'}</td>
+              <td>{r.receiver_name}</td>
               <td>{(r.materials || []).length} item(s)</td>
               <td>
                 <div className="buttonrow">
@@ -668,75 +588,45 @@ function RecordTable({ records, onView, onPDF }) {
 }
 
 function ChallanPreview({ record: r }) {
-  const items = r.materials || [];
-  const total = items.reduce((acc, m) => acc + (Number(m.qty || m.quantity || 0) * Number(m.rate || 0)), 0);
-
   return (
-    <div className="paper" style={{ padding: '20px', background: '#fff', color: '#000', border: '1px solid #003366' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #003366', paddingBottom: '10px', marginBottom: '15px' }}>
-        <div>
-          <h2 style={{ color: '#003366', margin: 0, fontSize: '16px' }}>AtomPlus Technologies Private Limited</h2>
-          <small style={{ color: '#666' }}>https://atomplus.in[cite: 3]<br/>Regd Office: Bangalore, India[cite: 5]<br/>CIN: U40106KA2022PTC165701[cite: 5]</small>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <b style={{ color: '#003366' }}>Innovative Solutions<br/>for a Better Tomorrow[cite: 5]</b>
-        </div>
+    <div className="paper">
+      <h2>DELIVERY CHALLAN</h2>
+      <div className="paperline"><b>DC Number:</b> {r.dc_number}<b>Date:</b> {fmtDate(r.dc_date)}</div>
+      <div className="addressgrid">
+        <div><b>DISPATCH FROM</b><p>{r.from_address}</p></div>
+        <div><b>DELIVER TO</b><p>{r.to_address}</p></div>
       </div>
-      <h3 style={{ background: '#003366', color: '#fff', textAlign: 'center', padding: '6px', margin: '0 0 15px 0' }}>DELIVERY CHALLAN[cite: 5]</h3>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px', fontSize: '11px' }}>
-        <div><b>Dispatch From:</b><p style={{ whiteSpace: 'pre-line', margin: '4px 0' }}>{r.ship_from_address || r.from_address}</p></div>
-        <div>
-          <p style={{ margin: '2px 0' }}><b>DC No:</b> {r.dc_number}</p>
-          <p style={{ margin: '2px 0' }}><b>Date:</b> {fmtDate(r.dc_date)}</p>
-          <p style={{ margin: '2px 0' }}><b>Transport Mode:</b> {r.transport_mode || 'VRL LOGISTICS'}</p>
-          <p style={{ margin: '2px 0' }}><b>Vehicle No:</b> {r.vehicle_number}</p>
-        </div>
-      </div>
-
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginBottom: '15px' }}>
+      <h4>Material details</h4>
+      <table>
         <thead>
-          <tr style={{ background: '#e6f0fa', color: '#003366' }}>
-            <th style={{ border: '1px solid #003366', padding: '6px' }}>Sr.</th>
-            <th style={{ border: '1px solid #003366', padding: '6px', textAlign: 'left' }}>Description of Goods</th>
-            <th style={{ border: '1px solid #003366', padding: '6px' }}>HSN/SAC</th>
-            <th style={{ border: '1px solid #003366', padding: '6px' }}>Unit</th>
-            <th style={{ border: '1px solid #003366', padding: '6px' }}>Qty</th>
-            <th style={{ border: '1px solid #003366', padding: '6px', textAlign: 'right' }}>Rate</th>
-            <th style={{ border: '1px solid #003366', padding: '6px', textAlign: 'right' }}>Amount</th>
-          </tr>
+          <tr><th>Sr.</th><th>Material</th><th>Quantity</th><th>Unit</th></tr>
         </thead>
         <tbody>
-          {items.map((m, i) => (
+          {(r.materials || []).map((m, i) => (
             <tr key={i}>
-              <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'center' }}>{i + 1}</td>
-              <td style={{ border: '1px solid #003366', padding: '6px' }}>{m.name}</td>
-              <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'center' }}>{m.hsn || '83071000'}</td>
-              <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'center' }}>{m.unit || 'Nos'}</td>
-              <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'center' }}>{m.qty || m.quantity}</td>
-              <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'right' }}>₹ {(Number(m.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-              <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'right' }}>₹ {(Number(m.qty || m.quantity || 0) * Number(m.rate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              <td>{i + 1}</td>
+              <td>{m.name}</td>
+              <td>{m.qty}</td>
+              <td>{m.unit}</td>
             </tr>
           ))}
-          <tr style={{ background: '#f5f5f5', fontWeight: 'bold' }}>
-            <td colSpan="6" style={{ border: '1px solid #003366', padding: '6px', textAlign: 'right' }}>TOTAL</td>
-            <td style={{ border: '1px solid #003366', padding: '6px', textAlign: 'right' }}>₹ {total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-          </tr>
         </tbody>
       </table>
-      <div style={{ background: '#ffe599', padding: '6px', textAlign: 'center', fontWeight: 'bold', fontSize: '11px', marginBottom: '20px', border: '1px solid #003366' }}>
-        {r.terms_of_delivery || 'Our own materials moved from one site to another.'}
+      <h4>Transport and receiver</h4>
+      <div className="paperdetails">
+        <p><b>Vehicle:</b> {r.vehicle_number}</p>
+        <p><b>Driver:</b> {r.driver_name} · {r.driver_phone}</p>
+        <p><b>Receiver:</b> {r.receiver_name} · {r.receiver_phone}</p>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '30px' }}>
-        <small style={{ fontStyle: 'italic' }}>This is a computer-generated delivery challan.</small>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ borderTop: '1px solid #003366', width: '180px', marginBottom: '4px' }}></div>
-          <b>Authorised Signature[cite: 5]</b><br/>
-          <small>For AtomPlus Technologies Pvt. Ltd.[cite: 5]</small>
-        </div>
+      <div className="signatures">
+        <span>Authorized signatory</span>
+        <span>Receiver signature</span>
       </div>
     </div>
   );
 }
 
 createRoot(document.getElementById('root')).render(<App />);
+ 
+
+
